@@ -1,11 +1,1 @@
 # mupeSdCard
-# mupeSdCard
-# mupeSdCard
-# mupeSdCard
-# mupeSdCard
-# mupeSdCard
-# mupeSdCard
-# mupeSdCard
-# mupeSdCard
-# mupeSdCard
-# mupeSdCard
