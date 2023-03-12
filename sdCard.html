@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+
+
+<script>
+	$(document).ready(function() {
+		$.get("/modbus/cfg", function(data) {
+			const result = data.split("\n");
+			$("#intervall").val(result[0]);
+			$("#mqttTopic").val(result[1]);
+			var span = document.getElementById("range span")
+			span.textContent = result[0];
+		})
+	})
+	function onClickDel(nrDel) {
+		window.location.href = '/modbus/del/' + nrDel;
+	}
+</script>
+
+<script>
+	$(document).ready(function() {
+		$.get("/modbus/list", function(data) {
+			$("#nlist").html(data);
+		})
+	})
+</script>
+
+<script>
+	function displaySliderValue(eSlider) {
+		eSlider.parentElement.querySelector('span').textContent = eSlider.value;
+	}
+</script>
+
+</head>
+
+
+<body>
+	<h2>Config Modbus</h2>
+	<form action="	" method="post">
+		<div class="container">
+			<br>
+			<label for="mqttTopic">Mqtt Topic</label>
+			<br>
+			<input type="text" placeholder="mqttTopic" name="mqttTopic" id="mqttTopic" value="mqttTopic"
+				size="20">
+			<br>
+			<br>
+			<label for="intervall">Intervall in Minuten</label>
+			<span id="range span">1</span>
+			<br>
+			<input type="range" min="1" max="60" placeholder="Modbus Abfragperiod in Minuten"
+				name="intervall" value="1" id="intervall" oninput="displaySliderValue(this);">
+			<br>
+
+			<br>
+			<button type="submit">Save</button>
+		</div>
+	</form>
+
+	<form action="	" method="post">
+		<div class="container">
+			<label for="parName">Parameter Name</label>
+			<input type="text" placeholder="parName" name="parName" id="parName" value="name" size="10">
+			<label for="hostname">Hostname</label>
+			<input type="text" placeholder="Hostname" name="hostname" id="hostname" value="modbus.local"
+				size="20">
+			<label for="unitID">Unit ID</label>
+			<input type="number" placeholder="unitId" name="unitID" id="unitID" value="3" size="3">
+			<label for="ModbusAdress">Modbus Adresse</label>
+			<input type="number" placeholder="modbusadress" name="modbusadress" id="modbusadress"
+				value="30193" size="6">
+			<label for="biteLenght">Laenge</label>
+			<input type="number" placeholder="laenge" name="laenge" id="laenge" value="2" size="6">
+			<label for="port">Port Nr.</label>
+			<input type="number" placeholder="port" name="port" id="port" value="502" size="4">
+			<br>
+			<br>
+			<button type="submit">Save</button>
+		</div>
+	</form>
+	<br>
+	<p></p>
+	<div id="nlist"></div>
+	<p></p>
+
+</body>
+</html>

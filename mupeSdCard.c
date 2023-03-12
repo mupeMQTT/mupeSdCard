@@ -7,6 +7,10 @@
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
 
+#include "mupeDataBase.h"
+#include "mupeSdCardWeb.h"
+
+
 
 #define PIN_NUM_MISO  19
 #define PIN_NUM_MOSI  23
@@ -122,6 +126,9 @@ void mupeSdCardInit(void) {
 	if (pos) {
 		*pos = '\0';
 	}
+
+	mupeDataBaseInit();
+	mupeSdCardWebInit();
 //	ESP_LOGI(TAG, "Read from file: '%s'", line);
 
 	// All done, unmount partition and disable SPI peripheral
