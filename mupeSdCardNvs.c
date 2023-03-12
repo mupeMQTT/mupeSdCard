@@ -22,13 +22,30 @@
 #include "nvs_flash.h"
 #include "mupeSdCardNvs.h"
 
+#define NAMESPACE_NAME "SdCardcfg"
 
-void mupeModbusNvsInit(void) {
+void mupeSdCardNvsInit(void) {
 	esp_err_t err = nvs_flash_init();
 	if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
 		ESP_ERROR_CHECK(nvs_flash_erase());
 		err = nvs_flash_init();
 	}
 }
+uint32_t sDCardGet(void) {
+	uint32_t SdCardNvs;
+	nvs_handle_t my_handle;
+	nvs_open(NAMESPACE_NAME, NVS_READWRITE, &my_handle);
+	nvs_get_u32(my_handle, "SdCardNvs", &SdCardNvs);
+	nvs_commit(my_handle);
+	nvs_close(my_handle);
+	return SdCardNvs;
+}
+void sDCardSet(uint32_t SdCardNvs) {
 
+	nvs_handle_t my_handle;
+	nvs_open(NAMESPACE_NAME, NVS_READWRITE, &my_handle);
+	nvs_set_u32(my_handle, "SdCardNvs", SdCardNvs);
+	nvs_commit(my_handle);
+	nvs_close(my_handle);
+}
 

@@ -6,78 +6,67 @@
 
 <script>
 	$(document).ready(function() {
-		$.get("/modbus/cfg", function(data) {
+		$.get("/sdcard/cfg", function(data) {
 			const result = data.split("\n");
-			$("#intervall").val(result[0]);
-			$("#mqttTopic").val(result[1]);
-			var span = document.getElementById("range span")
-			span.textContent = result[0];
+			$("#miso").val(result[0]);
+			$("#mosi").val(result[1]);
+			$("#ckl").val(result[2]);
+			$("#cs").val(result[3]);
 		})
 	})
+
 	function onClickDel(nrDel) {
-		window.location.href = '/modbus/del/' + nrDel;
+		window.location.href = '/sdcard/del/' + nrDel;
 	}
 </script>
 
 <script>
 	$(document).ready(function() {
-		$.get("/modbus/list", function(data) {
+		$.get("/sdcard/list", function(data) {
 			$("#nlist").html(data);
 		})
 	})
 </script>
-
-<script>
-	function displaySliderValue(eSlider) {
-		eSlider.parentElement.querySelector('span').textContent = eSlider.value;
-	}
-</script>
-
 </head>
 
 
 <body>
-	<h2>Config Modbus</h2>
+	<h2>Config SdCard</h2>
+	<h4>19 23 18 5</h4>
 	<form action="	" method="post">
 		<div class="container">
 			<br>
-			<label for="mqttTopic">Mqtt Topic</label>
+			<label for="miso">miso</label>
+			<input type="number" placeholder="miso" name="miso" id="miso" value="19" min="0" max="255"
+				size="4">
+			<label for="mosi">mosi</label>
+			<input type="number" placeholder="mosi" name="mosi" id="mosi" value="23" min="0" max="255"
+				size="4">
+			<label for="clk">clk</label>
+			<input type="number" placeholder="clk" name="clk" id="clk" value="18" min="0" max="255" size="4">
+			<label for="cs">cs</label>
+			<input type="number" placeholder="cs" name="cs" id="cs" value="5" min="0" max="255" size="4">
 			<br>
-			<input type="text" placeholder="mqttTopic" name="mqttTopic" id="mqttTopic" value="mqttTopic"
-				size="20">
-			<br>
-			<br>
-			<label for="intervall">Intervall in Minuten</label>
-			<span id="range span">1</span>
-			<br>
-			<input type="range" min="1" max="60" placeholder="Modbus Abfragperiod in Minuten"
-				name="intervall" value="1" id="intervall" oninput="displaySliderValue(this);">
-			<br>
-
 			<br>
 			<button type="submit">Save</button>
+			<h4>active by reboot</h4>
+			<br>
+			<br>
 		</div>
 	</form>
-
+	<h2>Config Database</h2>
 	<form action="	" method="post">
 		<div class="container">
-			<label for="parName">Parameter Name</label>
-			<input type="text" placeholder="parName" name="parName" id="parName" value="name" size="10">
-			<label for="hostname">Hostname</label>
-			<input type="text" placeholder="Hostname" name="hostname" id="hostname" value="modbus.local"
+			<label for="topic">Topic</label>
+			<input type="text" placeholder="topic" name="topic" id="topic" value="topic" size="30">
+			<label for="parameter">Parameter</label>
+			<input type="text" placeholder="parameter" name="parameter" id="parameter" value="parameter"
 				size="20">
-			<label for="unitID">Unit ID</label>
-			<input type="number" placeholder="unitId" name="unitID" id="unitID" value="3" size="3">
-			<label for="ModbusAdress">Modbus Adresse</label>
-			<input type="number" placeholder="modbusadress" name="modbusadress" id="modbusadress"
-				value="30193" size="6">
-			<label for="biteLenght">Laenge</label>
-			<input type="number" placeholder="laenge" name="laenge" id="laenge" value="2" size="6">
-			<label for="port">Port Nr.</label>
-			<input type="number" placeholder="port" name="port" id="port" value="502" size="4">
 			<br>
 			<br>
 			<button type="submit">Save</button>
+			<br>
+			<br>
 		</div>
 	</form>
 	<br>

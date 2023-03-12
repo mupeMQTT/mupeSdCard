@@ -1,4 +1,3 @@
-
 // Copyright Peter Müller mupe
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -25,19 +24,10 @@
 #include "esp_system.h"
 #include "esp_http_server.h"
 
-typedef struct SdCardNvs{
-	uint64_t id;
-  char parameterName[20];
-  char hostname[20];
-  uint8_t unitId;
-  uint16_t adress;
-  uint8_t size;
-  uint16_t portNr;
-} SdCardNvs;
-
-void mupeModbusNvsInit(void);
 
 
-
+void mupeSdCardNvsInit(void);
+uint32_t sDCardGet(void);
+void sDCardSet(uint32_t SdCardNvs);
 
 #endif
