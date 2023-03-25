@@ -1,0 +1,133 @@
+
+<html>
+
+<head>
+<style>
+.slidecontainer {
+	width: 100%;
+}
+
+.slider {
+	-webkit-appearance: none;
+	width: 100%;
+	height: 25px;
+	background: #d3d3d3;
+	outline: none;
+	opacity: 0.7;
+	-webkit-transition: .2s;
+	transition: opacity .2s;
+}
+
+.slider:hover {
+	opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 25px;
+	height: 25px;
+	background: #04AA6D;
+	cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+	width: 25px;
+	height: 25px;
+	background: #04AA6D;
+	cursor: pointer;
+}
+</style>
+<script src="https://code.jquery.com/jquery-3.6.3.js"></script>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+<script type="text/javascript">
+	google.charts.load('current', {
+		'packages' : [ 'corechart' ]
+	});
+	google.charts.setOnLoadCallback(drawVisualization);
+
+	let topic = 'tripower/mqtt';
+	let parameter = 'leistung';
+	let from_ = "8";
+	let to_ = "0";
+
+	var slider = document.getElementById("myRange");
+	var output = document.getElementById("demo");
+	output.innerHTML = slider.value;
+
+	slider.oninput = function() {
+		output.innerHTML = this.value;
+	}
+
+	function drawVisualization() {
+		let chart = new google.visualization.LineChart(document
+				.getElementById('chart_div'));
+		let options = {
+			title : 'Test',
+			curveType : 'function',
+			legend : {
+				position : 'bottom'
+			},
+			gridlines : {
+				count : -1,
+				units : {
+					days : {
+						format : [ 'YY MMM dd' ]
+					},
+					hours : {
+						format : [ 'HH:mm', 'ha' ]
+					},
+				}
+			},
+			vAxis : {
+				minValue : 0,
+				viewWindow : {
+					min : 0
+				}
+
+			}
+		};
+
+		$.post("sdcard", {
+			dataget : topic.concat('/', parameter),
+			from : from_,
+			to : to_
+		}).done(function(csvdata) {
+			let array = csvdata.split("\n").map(function(line) {
+				return line.split(",");
+			});
+
+			array = array.map(function(row) {
+				row[0] = new Date(row[0] * 1000);
+				row[1] = +(row[1]);
+				return row;
+			});
+
+			array[0] = [ {
+				label : 'Date',
+				type : 'date'
+			}, {
+				label : parameter,
+				type : 'number'
+			} ];
+			// this new DataTable object holds all the data
+			var data = new google.visualization.arrayToDataTable(array);
+			chart.draw(data, options);
+		});
+	}
+</script>
+</head>
+<div class="slidecontainer">
+	<input type="range" min="1" max="10" value="8" class="slider" id="myRange">
+	<p>
+		Value:
+		<span id="demo"></span>
+	</p>
+</div>
+<body>
+	<div id="chart_div" style="width: 100%; height: 50%;"></div>
+</body>
+
+</html>
+
+

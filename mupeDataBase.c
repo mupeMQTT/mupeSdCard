@@ -8,7 +8,7 @@
 #include "mupeClientMqtt.h"
 #include "mqtt_client.h"
 #include "mupeMdnsNtp.h"
-
+#include "mupeSdCardNvs.h"
 
 static const char *TAG = "mupeDataBase";
 
@@ -159,17 +159,16 @@ static void mqtt_event_handlerDB(void *handler_args, esp_event_base_t base,
 			char topic[event->topic_len + 1];
 			strncpy(topic, event->topic, event->topic_len);
 			topic[event->topic_len] = '\0';
-		mqttDataBaseStore(topic, event->data, event->data_len, "leistung");
-		/*	double from=getNowMinus(1);
-			double to=getNowMinus(0);
+			DatabaseNvs databaseNvs;
+			uint8_t pos=0;
+			while  (databaseCheckTopic(topic, &databaseNvs,pos)==0) {
+				mqttDataBaseStore(topic, event->data, event->data_len,
+						databaseNvs.parameter);
 
-			size_t size= mqttDataBaseGetSize(from,to,topic,"leistung");
-			MupeDbDtata mupeDbDtata[size];
-			mqttDataBaseGetData(from,to,topic,"leistung",mupeDbDtata);
-			for (size_t i = 0; i < size; ++i) {
-				ESP_LOGI(TAG, "data %f %f",mupeDbDtata[i].ts, mupeDbDtata[i].data);
+
+				pos++;
 			}
-*/
+
 		}
 		break;
 	case MQTT_EVENT_ERROR:
@@ -182,11 +181,11 @@ static void mqtt_event_handlerDB(void *handler_args, esp_event_base_t base,
 	}
 }
 
-void mupeDataBaseInit(){
-	esp_mqtt_client_handle_t client= get_esp_mqtt_client_handle_t();
-	esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handlerDB,
-	NULL);
-
+void mupeDataBaseInit() {
+	esp_mqtt_client_handle_t client = get_esp_mqtt_client_handle_t();
+	esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID,
+			mqtt_event_handlerDB,
+			NULL);
 
 }
 

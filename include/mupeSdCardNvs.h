@@ -24,10 +24,18 @@
 #include "esp_system.h"
 #include "esp_http_server.h"
 
-
+typedef struct DatabaseNvs{
+	uint64_t id;
+  char topic[50];
+  char parameter[20];
+} DatabaseNvs;
 
 void mupeSdCardNvsInit(void);
 uint32_t sDCardGet(void);
 void sDCardSet(uint32_t SdCardNvs);
-
+void sendDatabaseCfg(httpd_req_t *req);
+void sendDatabaseData(httpd_req_t *req);
+void databaseNvsSet(DatabaseNvs *databaseNvs);
+void databaseNvsDel(char *id);
+uint8_t databaseCheckTopic(char *topic, DatabaseNvs *databaseNvsret,uint8_t pos);
 #endif
