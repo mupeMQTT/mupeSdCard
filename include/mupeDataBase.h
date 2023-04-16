@@ -29,7 +29,7 @@ typedef struct MupeDbDtata{
   double  data;
 } MupeDbDtata;
 
-void 	mqttDataBaseStore(char * topic,char * data,size_t sl,char* paramter);
+void 	mqttDataBaseStore(char * topic,char * data,size_t sl,char* paramter,char* unixtime);
 
 size_t mqttDataBaseGetSize(double from, double to,char * topic,char* paramter );
 

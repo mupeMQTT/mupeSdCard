@@ -3,5 +3,6 @@
 #define MOUNT_POINT "/sdcard"
 
 void mupeSdCardInit(void );
+char* pathReplace(char *string) ;
 #endif
 

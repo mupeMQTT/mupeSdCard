@@ -6,24 +6,36 @@
 #include <sys/stat.h>
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
+#include "mupeWeb.h"
 
 #include "mupeDataBase.h"
 #include "mupeSdCardWeb.h"
-
-
+#include "mupeSdCardNvs.h"
 
 #define PIN_NUM_MISO  19
 #define PIN_NUM_MOSI  23
 #define PIN_NUM_CLK   18
 #define PIN_NUM_CS    5
 
-
 #define FORMAT 0
 
 static const char *TAG = "mupeSdCard";
 
-void mupeSdCardInit(void) {
+char* pathReplace(char *string) {
+	char find[8] = { '<', '>', ':', '\"',  '\\', '|', '?', '*' };
 
+	for (int i = 0; i < 8; ++i) {
+		for (int x = 0; x < strlen(string); ++x) {
+			if (string[x]==find[i]){
+				string[x]='_';
+			}
+		}
+	}
+	return string;
+}
+
+void mupeSdCardInit(void) {
+	mupeSdCardWebInit();
 	esp_err_t ret;
 	esp_vfs_fat_sdmmc_mount_config_t mount_config = { .format_if_mount_failed =
 	FORMAT, .max_files = 5, .allocation_unit_size = 16 * 1024 };
@@ -31,19 +43,23 @@ void mupeSdCardInit(void) {
 	const char mount_point[] = MOUNT_POINT;
 	ESP_LOGI(TAG, "Initializing SD card");
 
-	// Use settings defined above to initialize SD card and mount FAT filesystem.
-	// Note: esp_vfs_fat_sdmmc/sdspi_mount is all-in-one convenience functions.
-	// Please check its source code and implement error recovery when developing
-	// production applications.
+// Use settings defined above to initialize SD card and mount FAT filesystem.
+// Note: esp_vfs_fat_sdmmc/sdspi_mount is all-in-one convenience functions.
+// Please check its source code and implement error recovery when developing
+// production applications.
 	ESP_LOGI(TAG, "Using SPI peripheral");
 
-	// By default, SD card frequency is initialized to SDMMC_FREQ_DEFAULT (20MHz)
-	// For setting a specific frequency, use host.max_freq_khz (range 400kHz - 20MHz for SDSPI)
-	// Example: for fixed frequency of 10MHz, use host.max_freq_khz = 10000;
+// By default, SD card frequency is initialized to SDMMC_FREQ_DEFAULT (20MHz)
+// For setting a specific frequency, use host.max_freq_khz (range 400kHz - 20MHz for SDSPI)
+// Example: for fixed frequency of 10MHz, use host.max_freq_khz = 10000;
 	sdmmc_host_t host = SDSPI_HOST_DEFAULT();
 
-	spi_bus_config_t bus_cfg = { .mosi_io_num = PIN_NUM_MOSI, .miso_io_num =
-	PIN_NUM_MISO, .sclk_io_num = PIN_NUM_CLK, .quadwp_io_num = -1,
+	uint32_t conf;
+	conf=sDCardGet();
+
+
+	spi_bus_config_t bus_cfg = { .mosi_io_num = (conf>>16)&0xFF , .miso_io_num =
+			(conf>>24)&0xFF , .sclk_io_num = (conf>>8)&0xFF, .quadwp_io_num = -1,
 			.quadhd_io_num = -1, .max_transfer_sz = 4000, };
 	ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
 	if (ret != ESP_OK) {
@@ -51,10 +67,10 @@ void mupeSdCardInit(void) {
 		return;
 	}
 
-	// This initializes the slot without card detect (CD) and write protect (WP) signals.
-	// Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
+// This initializes the slot without card detect (CD) and write protect (WP) signals.
+// Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
 	sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-	slot_config.gpio_cs = PIN_NUM_CS;
+	slot_config.gpio_cs = conf&0xFF ;
 	slot_config.host_id = host.slot;
 
 	ESP_LOGI(TAG, "Mounting filesystem");
@@ -74,68 +90,18 @@ void mupeSdCardInit(void) {
 	}
 	ESP_LOGI(TAG, "Filesystem mounted");
 
-	// Card has been initialized, print its properties
+// Card has been initialized, print its properties
 	sdmmc_card_print_info(stdout, card);
 
-	// Use POSIX and C standard library functions to work with files.
-
-	// First create a file.
-	const char *file_hello = MOUNT_POINT"/hello.txt";
-
-	ESP_LOGI(TAG, "Opening file %s", file_hello);
-	FILE *f = fopen(file_hello, "w");
-	if (f == NULL) {
-		ESP_LOGE(TAG, "Failed to open file for writing");
-		return;
-	}
-	fprintf(f, "Hello %s!\n", card->cid.name);
-	fclose(f);
-	ESP_LOGI(TAG, "File written");
-
-	const char *file_foo = MOUNT_POINT"/foo.txt";
-
-	// Check if destination file exists before renaming
-	struct stat st;
-	if (stat(file_foo, &st) == 0) {
-		// Delete it if it exists
-		unlink(file_foo);
-	}
-
-	// Rename original file
-	ESP_LOGI(TAG, "Renaming file %s to %s", file_hello, file_foo);
-	if (rename(file_hello, file_foo) != 0) {
-		ESP_LOGE(TAG, "Rename failed");
-		return;
-	}
-
-	// Open renamed file for reading
-	ESP_LOGI(TAG, "Reading file %s", file_foo);
-	f = fopen(file_foo, "r");
-	if (f == NULL) {
-		ESP_LOGE(TAG, "Failed to open file for reading");
-		return;
-	}
-
-	// Read a line from file
-	char line[64];
-	fgets(line, sizeof(line), f);
-	fclose(f);
-
-	// Strip newline
-	char *pos = strchr(line, '\n');
-	if (pos) {
-		*pos = '\0';
-	}
-
 	mupeDataBaseInit();
-	mupeSdCardWebInit();
+
 //	ESP_LOGI(TAG, "Read from file: '%s'", line);
 
-	// All done, unmount partition and disable SPI peripheral
+// All done, unmount partition and disable SPI peripheral
 //	esp_vfs_fat_sdcard_unmount(mount_point, card);
 //	ESP_LOGI(TAG, "Card unmounted");
 
-	//deinitialize the bus after all devices are removed
+//deinitialize the bus after all devices are removed
 //	spi_bus_free(host.slot);
 }
 

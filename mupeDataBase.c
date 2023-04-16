@@ -2,7 +2,6 @@
 #include <mupeSdCard.h>
 #include <stdio.h>
 #include <string.h>
-#include "mupeSdCard.h"
 #include <sys/stat.h>
 #include "esp_log.h"
 #include "mupeClientMqtt.h"
@@ -12,7 +11,8 @@
 
 static const char *TAG = "mupeDataBase";
 
-void mqttDataBaseStore(char *topic, char *data, size_t sl, char *paramter) {
+void mqttDataBaseStore(char *topic, char *data, size_t sl, char *paramter,
+		char *unixtime) {
 
 	struct stat st = { 0 };
 
@@ -21,8 +21,9 @@ void mqttDataBaseStore(char *topic, char *data, size_t sl, char *paramter) {
 	strcat(fileName, "/db");
 	strcat(fileName, "/");
 	strcat(fileName, topic);
-
+	pathReplace(fileName);
 	char path[sizeof(fileName)];
+
 	int ofset = 1;
 	do {
 		if (strchr(&fileName[ofset], '/') != NULL) {
@@ -43,12 +44,18 @@ void mqttDataBaseStore(char *topic, char *data, size_t sl, char *paramter) {
 	strcat(fileName, ".dat");
 	FILE *f = fopen(fileName, "ab");
 
-	ESP_LOGI(TAG, "%s %i", fileName, f==NULL);
 	if (strstr(data, paramter) != NULL) {
 		char *pos1 = strstr(data, paramter);
 		char *pos2 = strstr(pos1, ":");
 		double d = atof(&pos2[1]);
-		pos1 = strstr(data, "\"ts\":");
+		if (d == 0) {
+			if (strstr(&pos2[1], "true") == &pos2[1]) {
+				d = 1;
+			} else {
+				d = 0;
+			}
+		}
+		pos1 = strstr(data, unixtime);
 		pos2 = strstr(pos1, ":");
 		double t = atof(&pos2[1]);
 		fwrite(&t, sizeof(t), 1, f);
@@ -61,7 +68,8 @@ void mqttDataBaseStore(char *topic, char *data, size_t sl, char *paramter) {
 size_t findPos(FILE *fp, double utime) {
 	MupeDbDtata mupeDbDtata;
 	fseek(fp, 0L, SEEK_END);
-	size_t f_s = ftell(fp);
+	size_t f_smax = ftell(fp);
+	size_t f_s = f_smax;
 	size_t h;
 	h = f_s;
 	h = h / 2;
@@ -80,8 +88,28 @@ size_t findPos(FILE *fp, double utime) {
 		}
 		fseek(fp, f_s, SEEK_SET);
 		fread(&mupeDbDtata, 1, sizeof(mupeDbDtata), fp);
+
 	}
-	ESP_LOGI(TAG, "DB POS %f %u", utime, f_s);
+
+	if (utime > mupeDbDtata.ts) {
+
+		while ((utime > mupeDbDtata.ts) & (f_s < f_smax)) {
+			f_s = f_s + sizeof(mupeDbDtata);
+			fseek(fp, f_s, SEEK_SET);
+			fread(&mupeDbDtata, 1, sizeof(mupeDbDtata), fp);
+
+		}
+	} else {
+		while ((utime < mupeDbDtata.ts) & (f_s != 0)) {
+			f_s = f_s - sizeof(mupeDbDtata);
+			fseek(fp, f_s, SEEK_SET);
+			fread(&mupeDbDtata, 1, sizeof(mupeDbDtata), fp);
+
+		}
+	}
+
+	ESP_LOGI(TAG, "DB POS %f %u %u", utime, f_s, f_smax);
+
 	return f_s;
 }
 
@@ -94,6 +122,7 @@ size_t mqttDataBaseGetSize(double from, double to, char *topic, char *paramter) 
 	strcat(path, "/");
 	strcat(path, paramter);
 	strcat(path, ".dat");
+	pathReplace(path);
 	FILE *fp = fopen(path, "r");
 	ESP_LOGI(TAG, "---%s ", path);
 	size_t p_from = findPos(fp, from);
@@ -114,6 +143,7 @@ void mqttDataBaseGetData(double from, double to, char *topic, char *paramter,
 	strcat(path, "/");
 	strcat(path, paramter);
 	strcat(path, ".dat");
+	pathReplace(path);
 	FILE *fp = fopen(path, "r");
 	ESP_LOGI(TAG, "---%s ", path);
 	size_t p_from = findPos(fp, from);
@@ -153,19 +183,17 @@ static void mqtt_event_handlerDB(void *handler_args, esp_event_base_t base,
 	case MQTT_EVENT_DATA:
 		ESP_LOGI(TAG, "MQTT_EVENT_DATA");
 
-		printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-		printf("DATA=%.*s\r\n", event->data_len, event->data);
+		ESP_LOGI(TAG,"TOPIC=%.*s\r\n", event->topic_len, event->topic);
+		ESP_LOGI(TAG,"DATA=%.*s\r\n", event->data_len, event->data);
 		if (event->data_len > 0) {
 			char topic[event->topic_len + 1];
 			strncpy(topic, event->topic, event->topic_len);
 			topic[event->topic_len] = '\0';
 			DatabaseNvs databaseNvs;
-			uint8_t pos=0;
-			while  (databaseCheckTopic(topic, &databaseNvs,pos)==0) {
+			uint8_t pos = 0;
+			while (databaseCheckTopic(topic, &databaseNvs, pos) == 0) {
 				mqttDataBaseStore(topic, event->data, event->data_len,
-						databaseNvs.parameter);
-
-
+						databaseNvs.parameter, databaseNvs.unixTime);
 				pos++;
 			}
 

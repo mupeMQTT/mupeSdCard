@@ -2,40 +2,27 @@
 <html>
 
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 .slidecontainer {
 	width: 100%;
 }
 
-.slider {
-	-webkit-appearance: none;
+datalist {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	writing-mode: vertical-lr;
 	width: 100%;
-	height: 25px;
-	background: #d3d3d3;
-	outline: none;
-	opacity: 0.7;
-	-webkit-transition: .2s;
-	transition: opacity .2s;
 }
 
-.slider:hover {
-	opacity: 1;
+option {
+	padding: 0;
 }
 
-.slider::-webkit-slider-thumb {
-	-webkit-appearance: none;
-	appearance: none;
-	width: 25px;
-	height: 25px;
-	background: #04AA6D;
-	cursor: pointer;
-}
-
-.slider::-moz-range-thumb {
-	width: 25px;
-	height: 25px;
-	background: #04AA6D;
-	cursor: pointer;
+input[type="range"] {
+	width: 100%;
+	margin: 0;
 }
 </style>
 <script src="https://code.jquery.com/jquery-3.6.3.js"></script>
@@ -44,39 +31,114 @@
 	google.charts.load('current', {
 		'packages' : [ 'corechart' ]
 	});
-	google.charts.setOnLoadCallback(drawVisualization);
 
+	google.charts.setOnLoadCallback(get_topic_paramter);
 	let topic = 'tripower/mqtt';
 	let parameter = 'leistung';
-	let from_ = "8";
+	let idp = 'chart_div';
+	let from_ = "24";
 	let to_ = "0";
+	let dt = 0;
+	let array_x = [ [ "tripower/mqtt", "leistung", "chart_div" ] ];
 
-	var slider = document.getElementById("myRange");
-	var output = document.getElementById("demo");
-	output.innerHTML = slider.value;
+	function updateFromTo() {
+		from_ = Number(fromR.value) + Number(toR.value);
+		if (Number(fromR.value) > (960 + dt) - 96) {
+			dt = dt + 96;
+			fromR.min = (Number(fromR.min) + 96).toString();
+			fromR.max = (Number(fromR.max) + 96).toString();
+		}
+		if (Number(fromR.value) < 96 + dt) {
+			if (dt > 0) {
+				dt = dt - 96;
+				fromR.min = (Number(fromR.min) - 96).toString();
+				fromR.max = (Number(fromR.max) - 96).toString();
+			}
+		}
+		to_ = Number(fromR.value);
+		var today = new Date();
+		for (let i = 0; i <= 10; i++) {
+			today = new Date();
+			today.setHours(today.getHours() - i
+					* (Number(fromR.max) - Number(fromR.min)) / 10 - dt);
+			var date = today.getDate() + '.' + (today.getMonth() + 1) + '.'
+					+ (today.getFullYear() - 2000) + ' ' + today.getHours();
+			values2.options[i].label = date;
+			values2.options[i].value = i
+					* (Number(fromR.max) - Number(fromR.min)) / 10;
+		}
+	}
 
-	slider.oninput = function() {
-		output.innerHTML = this.value;
+	function changeValueFrom(newVal) {
+		updateFromTo();
+		drawVisualization();
+	}
+
+	function changeValueTo(newVal) {
+		updateFromTo();
+		drawVisualization();
+	}
+
+
+
+
+	function buttonClick(evt) {
+		topic = array_x[evt.currentTarget.myParam][0];
+		parameter = array_x[evt.currentTarget.myParam][1];
+		drawVisualization();
+	}
+
+	function get_topic_paramter() {
+		$.post("sdcard", {
+			topic_paramter : '----'
+
+		}).done(
+				function(data_x) {
+					array_x = data_x.split("\n").map(function(line) {
+						return line.split(",");
+					});
+					for (let i = 0; i < array_x.length; i++) {
+						let newBtn = document.createElement('button');
+						newBtn.innerText = array_x[i][0] + " " + array_x[i][1];
+						newBtn.addEventListener("click", buttonClick, false);
+						newBtn.myParam = i;
+
+						document.querySelector('#button-container')
+								.appendChild(newBtn);
+					}
+					topic = array_x[0][0];
+					parameter = array_x[0][1];
+					idp = "chart_div";
+					drawVisualization();
+				});
 	}
 
 	function drawVisualization() {
+		var from = new Date();
+		from.setHours(from.getHours() - to_);
+		var to = new Date();
+		to.setHours(to.getHours() - from_);
+
 		let chart = new google.visualization.LineChart(document
-				.getElementById('chart_div'));
+				.getElementById(idp));
 		let options = {
-			title : 'Test',
+			title : topic + ' ' + to.getDate() + '.' + (to.getMonth() + 1)
+					+ '.' + to.getFullYear() + ' '+ to.getHours() +':' + to.getMinutes()+ ' bis ' + from.getDate() + '.'
+					+ (from.getMonth() + 1) + '.' + from.getFullYear() + ' '
+					+ from.getHours() + ':' + from.getMinutes(),
 			curveType : 'function',
 			legend : {
-				position : 'bottom'
+				position : 'top',
+				alignment : 'start'
 			},
-			gridlines : {
-				count : -1,
-				units : {
-					days : {
-						format : [ 'YY MMM dd' ]
-					},
-					hours : {
-						format : [ 'HH:mm', 'ha' ]
-					},
+			hAxis : {
+				format : 'HH:mm',
+				gridlines : {
+					count : 12
+				},
+				viewWindow : {
+					min : from,
+					max : to
 				}
 			},
 			vAxis : {
@@ -84,10 +146,8 @@
 				viewWindow : {
 					min : 0
 				}
-
 			}
 		};
-
 		$.post("sdcard", {
 			dataget : topic.concat('/', parameter),
 			from : from_,
@@ -117,17 +177,47 @@
 	}
 </script>
 </head>
-<div class="slidecontainer">
-	<input type="range" min="1" max="10" value="8" class="slider" id="myRange">
-	<p>
-		Value:
-		<span id="demo"></span>
-	</p>
-</div>
-<body>
-	<div id="chart_div" style="width: 100%; height: 50%;"></div>
-</body>
+<body onload="updateFromTo()">
+	<div class="slidecontainer">
+		<input id="fromR" type="range" min="0" value="0" max="960" step="1"
+			onchange="changeValueFrom(this.value)" class="slider" list="values2">
+		<datalist id="values2">
+			<option value="0" label=""></option>
+			<option value="96" label=""></option>
+			<option value="192" label=""></option>
+			<option value="288" label=""></option>
+			<option value="384" label=""></option>
+			<option value="480" label=""></option>
+			<option value="576" label=""></option>
+			<option value="672" label=""></option>
+			<option value="768" label=""></option>
+			<option value="864" label=""></option>
+			<option value="960" label=""></option>
+		</datalist>
+	</div>
 
+
+
+
+
+	<div id="button-container"></div>
+	<div id="chart_div" style="width: 100%; height: 70%;"></div>
+
+	<input id="toR" type="range" min="1" value="24" max="48" step="1"
+		onchange="changeValueTo(this.value)" list="values" class="slider">
+
+	<datalist id="values">
+		<option value="1" label="1"></option>
+		<option value="5" label="5"></option>
+		<option value="10" label="10"></option>
+		<option value="15" label="15"></option>
+		<option value="20" label="20"></option>
+		<option value="25" label="25"></option>
+		<option value="30" label="30"></option>
+		<option value="35" label="35"></option>
+		<option value="40" label="40"></option>
+	</datalist>
+</body>
 </html>
 
 

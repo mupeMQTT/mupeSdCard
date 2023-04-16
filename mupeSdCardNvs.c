@@ -78,6 +78,7 @@ uint8_t databaseCheckTopic(char *topic, DatabaseNvs *databaseNvsret,
 				databaseNvsret->id = databaseNvs.id;
 				strcpy(databaseNvsret->parameter, databaseNvs.parameter);
 				strcpy(databaseNvsret->topic, databaseNvs.topic);
+				strcpy(databaseNvsret->unixTime, databaseNvs.unixTime);
 				return 0;
 			}
 			posx++;
@@ -93,7 +94,7 @@ uint8_t databaseCheckTopic(char *topic, DatabaseNvs *databaseNvsret,
 void sendDatabaseCfg(httpd_req_t *req) {
 
 	nvs_iterator_t it = NULL;
-	char value[95];
+	char value[150];
 	esp_err_t res = nvs_entry_find(NVS_DEFAULT_PART_NAME, NAMESPACE_NAME,
 			NVS_TYPE_BLOB, &it);
 	while (res == ESP_OK) {
@@ -102,7 +103,7 @@ void sendDatabaseCfg(httpd_req_t *req) {
 		DatabaseNvs databaseNvs;
 		databaseNvs.id = atoll(info.key);
 		databaseNvsGet(&databaseNvs);
-		sprintf(value, "<tr><th>%s</th><th>%s</th>", databaseNvs.topic,
+		sprintf(value, "<tr><th>%s</th><th>%s</th><th>%s</th>", databaseNvs.topic, databaseNvs.unixTime,
 				databaseNvs.parameter);
 		httpd_resp_send_chunk(req, value, strlen(value));
 		sprintf(value,
@@ -112,6 +113,32 @@ void sendDatabaseCfg(httpd_req_t *req) {
 
 		res = nvs_entry_next(&it);
 	}
+	nvs_release_iterator(it);
+
+}
+void sendDatabaseCfgCSV(httpd_req_t *req) {
+
+	nvs_iterator_t it = NULL;
+	char value[95];
+	esp_err_t res = nvs_entry_find(NVS_DEFAULT_PART_NAME, NAMESPACE_NAME,
+			NVS_TYPE_BLOB, &it);
+	int lauf=0;
+	while (res == ESP_OK) {
+		if (lauf!=0){
+			sprintf(value, "%s","\n");
+			httpd_resp_send_chunk(req, value, strlen(value));
+		}
+		nvs_entry_info_t info;
+		nvs_entry_info(it, &info); // Can omit error check if parameters are guaranteed to be non-NULL
+		DatabaseNvs databaseNvs;
+		databaseNvs.id = atoll(info.key);
+		databaseNvsGet(&databaseNvs);
+		sprintf(value, "%s,%s,chart_div%i", databaseNvs.topic,databaseNvs.parameter,lauf);
+		httpd_resp_send_chunk(req, value, strlen(value));
+		res = nvs_entry_next(&it);
+		lauf++;
+	}
+	httpd_resp_send_chunk(req, NULL, 0);
 	nvs_release_iterator(it);
 
 }

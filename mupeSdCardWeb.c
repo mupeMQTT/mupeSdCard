@@ -45,7 +45,7 @@ esp_err_t root_sdCard_post_handler(httpd_req_t *req) {
 
 	uint32_t sdCardNvs = 0;
 	DatabaseNvs databaseNvs;
-	char value[20];
+	char value[50];
 	if (find_value("miso=", buf, value) > 0) {
 		sdCardNvs = sdCardNvs + (atoi(value) << 24);
 	}
@@ -61,10 +61,12 @@ esp_err_t root_sdCard_post_handler(httpd_req_t *req) {
 		sDCardSet(sdCardNvs);
 	}
 	if (find_value("topic=", buf, value) > 0) {
-		char search[] = "%2F";
-		char replace[] = "/";
-		stringReplace(search, replace, value);
+		ESP_LOGI(TAG, "topic= %s", value);
 		strcpy(databaseNvs.topic, value);
+	}
+	if (find_value("unixTime=", buf, value) > 0) {
+		ESP_LOGI(TAG, "unixTime %s", value);
+		strcpy(databaseNvs.unixTime, value);
 	}
 	if (find_value("parameter=", buf, value) > 0) {
 		databaseNvs.id = getNowMs() / 1000;
@@ -78,34 +80,42 @@ esp_err_t root_sdCard_post_handler(httpd_req_t *req) {
 		to = atoi(value);
 	}
 	if (find_value("dataget=", buf, value) > 0) {
-		char search[] = "%2F";
-		char replace[] = "/";
-		stringReplace(search, replace, value);
-		double _from = getNowMinus(from);
-		double _to = getNowMinus(to);
-
 		char topic[40];
-		strcpy(topic,value);
-		topic[strrchr(topic,'/')-topic]=0;
+		char parameter[20];
+		strcpy(parameter,strrchr(value, '/') + 1);
+		strcpy(topic, value);
+		topic[strrchr(topic, '/') - topic] = 0;
 		ESP_LOGI(TAG, "topic %s ", topic);
-		ESP_LOGI(TAG, "parameter %s ", strrchr(value,'/')+1);
-
-		size_t size = mqttDataBaseGetSize(_from, _to, topic,
-				strrchr(value,'/')+1);
-		MupeDbDtata *mupeDbDtata;
-		mupeDbDtata=malloc(size*sizeof(MupeDbDtata));
-		mqttDataBaseGetData(_from, _to, topic,
-				strrchr(value,'/')+1,mupeDbDtata);
+		ESP_LOGI(TAG, "parameter %s ",parameter);
+		ESP_LOGI(TAG, "from to %d %d ", from, to);
 		httpd_resp_set_type(req, "text/plain");
-		char value[70];
-	//	sprintf(value, "'Datum','Wert'");
-	//	httpd_resp_send_chunk(req, value, strlen(value));
-		for (size_t i = 0; i < size; ++i) {
-			sprintf(value, "%s%f,%f",i==0?"":"\n", mupeDbDtata[i].ts, mupeDbDtata[i].data);
-			httpd_resp_send_chunk(req, value, strlen(value));
+		for (double var = to; var < from; var = var + 24) {
+			double _from = getNowMinus(((from-var)<24)?from:(var+24));
+			double _to = getNowMinus(var);
+			ESP_LOGI(TAG, "from to %lf %lf ", _from, _to);
+			size_t size = mqttDataBaseGetSize(_from, _to, topic,
+					parameter);
+
+			MupeDbDtata *mupeDbDtata;
+			mupeDbDtata = malloc(size * sizeof(MupeDbDtata));
+			mqttDataBaseGetData(_from, _to, topic, parameter,
+					mupeDbDtata);
+
+			char value[70];
+			for (size_t i = 0; i < size; ++i) {
+			sprintf(value, "%s%f,%f", (var == to) & (i==0) ? "" : "\n", mupeDbDtata[i].ts,
+						mupeDbDtata[i].data);
+				httpd_resp_send_chunk(req, value, strlen(value));
+			}
+			free(mupeDbDtata);
 		}
 		httpd_resp_send_chunk(req, NULL, 0);
-		free(mupeDbDtata);
+
+		free(buf);
+		return ESP_OK;
+	}
+	if (find_value("topic_paramter=", buf, value) > 0) {
+		sendDatabaseCfgCSV(req);
 		free(buf);
 		return ESP_OK;
 	}
@@ -121,7 +131,7 @@ esp_err_t sdCard_get_list(httpd_req_t *req) {
 	char value[70];
 	strcpy(value, "<html> <body><table style=\"width:50%\"> <tr>");
 	httpd_resp_send_chunk(req, value, strlen(value));
-	strcpy(value, "<th>Topic</th><th>Parameter</th><th>del</th>");
+	strcpy(value, "<th>Topic</th><th>unixTime</th><th>Parameter</th><th>del</th>");
 	httpd_resp_send_chunk(req, value, strlen(value));
 
 	sendDatabaseCfg(req);
@@ -187,6 +197,7 @@ esp_err_t root_sdCard_get_handler(httpd_req_t *req) {
 		httpd_resp_set_type(req, "text/html");
 		char value[500];
 		FILE *fp;
+		pathReplace(path);
 		if ((fp = fopen(path, "r")) == NULL) {
 			return sdCard_get_handler(req);
 		}

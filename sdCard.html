@@ -40,19 +40,18 @@
 
 <body>
 	<h2>Konfiguriere Sd Karte</h2>
-	<h4>19 23 18 5</h4>
 	<form action="	" method="post">
 		<div class="container">
 			<br>
-			<label for="miso">miso</label>
+			<label for="miso">miso 19</label>
 			<input type="number" placeholder="miso" name="miso" id="miso" value="19" min="0" max="255"
 				size="4">
-			<label for="mosi">mosDatabasei</label>
+			<label for="mosi">mosi 23</label>
 			<input type="number" placeholder="mosi" name="mosi" id="mosi" value="23" min="0" max="255"
 				size="4">
-			<label for="clk">clk</label>
+			<label for="clk">clk 18</label>
 			<input type="number" placeholder="clk" name="clk" id="clk" value="18" min="0" max="255" size="4">
-			<label for="cs">cs</label>
+			<label for="cs">cs 5/4</label>
 			<input type="number" placeholder="cs" name="cs" id="cs" value="5" min="0" max="255" size="4">
 			<br>
 			<br>
@@ -67,6 +66,9 @@
 		<div class="container">
 			<label for="topic">Topic</label>
 			<input type="text" placeholder="topic" name="topic" id="topic" value="topic" size="30">
+			<label for="unixTime">unixTime</label>
+			<input type="text" placeholder="unixTime" name="unixTime" id="unixTime" value="unixTime"
+				size="20">
 			<label for="parameter">Parameter</label>
 			<input type="text" placeholder="parameter" name="parameter" id="parameter" value="parameter"
 				size="20">
@@ -81,10 +83,10 @@
 	<p></p>
 	<div id="nlist"></div>
 	<p></p>
-		<h2>Daten</h2>
-		<p></p>
+	<h2>Daten</h2>
+	<p></p>
 	<div id="nldata"></div>
 	<p></p>
-<a href=sdCard.html >Daten</a>
+	<a href=sdCard.html>Daten</a>
 </body>
 </html>
